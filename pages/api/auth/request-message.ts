@@ -20,10 +20,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       network,
       ...config,
     });
-
+    console.log(message);
     res.status(200).json(message);
   } catch (error) {
-    res.status(400).json({ error });
-    console.error(error);
+    res.status(200).json({message: ''});
+    //console.error(error);
   }
 }

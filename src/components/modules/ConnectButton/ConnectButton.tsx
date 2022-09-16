@@ -23,7 +23,6 @@ const ConnectButton = () => {
       const userData = { address: account, chain: chain.id, network: 'evm' };
 
       const { message } = await apiPost('/auth/request-message', userData);
-
       const signature = await signMessageAsync({ message });
 
       await signIn('credentials', { message, signature, callbackUrl: '/' });

@@ -28,6 +28,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
     chain: process.env.APP_CHAIN_ID,
   });
 
+  console.log(balances);
   const tokensWithLogosAdded = balances.toJSON().map((balance) => ({
     ...balance,
     token: {
@@ -38,7 +39,7 @@ export const getServerSideProps: GetServerSideProps = async (context) => {
       }),
     },
   }));
-
+  console.log(tokensWithLogosAdded);
   return {
     props: {
       balances: JSON.parse(JSON.stringify(tokensWithLogosAdded)),

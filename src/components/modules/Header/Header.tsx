@@ -10,7 +10,7 @@ const Header = () => {
           <MoralisLogo />
           <NavBar />
           <HStack gap={'10px'}>
-            <ConnectButton />
+            {/* <ConnectButton /> */}
             <ColorModeButton />
           </HStack>
         </Flex>
