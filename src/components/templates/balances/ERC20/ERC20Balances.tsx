@@ -52,6 +52,7 @@ const ERC20Balances: FC<Web3Info> = ({ account, web3, chainId }) => {
   const [tokenList, setTokenList] = useState<any[]>([])
   const [balances, setBalances] = useState<IBalances>({})
   const [rbtBalance, setRbtBalance] = useState<string>('0');
+  const [isLoading, setIsLoading] = useState<boolean>(false);
   
   const toast = useToast();
 
@@ -233,29 +234,43 @@ const ERC20Balances: FC<Web3Info> = ({ account, web3, chainId }) => {
         value: 0,
         gasLimit: 0
     }
-
-    contractFunc(burnRBTNumber).estimateGas({from: account}).then((gasLimit: any) => {
-      tx.gasLimit = gasLimit;
-      web3.eth.sendTransaction(tx)
-          .on('receipt', () => {
-            toast({
-              title: 'Successfully',
-              description: `Burn RBT to get ${unit[chainId]}`,
-              status: 'success',
-              position: 'top-right',
-              isClosable: true,
+    
+    web3.eth.getBalance(account).then((preBalance: string) => {
+      contractFunc(burnRBTNumber).estimateGas({from: account}).then((gasLimit: any) => {
+        tx.gasLimit = gasLimit;
+        web3.eth.sendTransaction(tx)
+            .on('transactionHash', () => {
+              setIsLoading(true);
+            })
+            .on('receipt', (receipt: any) => {
+              onClose();
+              setIsLoading(false);
+              getRBTBalance();
+              const usedGasFee = new BigNumber(receipt.gasUsed).multipliedBy(new BigNumber(receipt.effectiveGasPrice));
+              web3.eth.getBalance(account).then((postBalance: string) => {
+                console.log(2, postBalance);
+                const ethAmount = usedGasFee.plus(new BigNumber(postBalance)).minus(new BigNumber(preBalance)).shiftedBy(-18).toString();
+                toast({
+                  title: 'Successfully',
+                  description: `Burn RBT to get ${ethAmount} ${unit[chainId]}`,
+                  status: 'success',
+                  position: 'top-right',
+                  isClosable: true,
+                });
+              });
+            })
+            .on('error', () => {
+              setIsLoading(false);
+              toast({
+                title: 'Burn Failed',
+                description: "Failed",
+                status: 'error',
+                position: 'top-right',
+                isClosable: true,
+              });
             });
-          })
-          .on('error', () => {
-            toast({
-              title: 'Swap Failed',
-              description: "Failed",
-              status: 'error',
-              position: 'top-right',
-              isClosable: true,
-            });
-          });
-      });
+        });
+    });
   }
 
   return (
@@ -333,7 +348,7 @@ const ERC20Balances: FC<Web3Info> = ({ account, web3, chainId }) => {
           </ModalBody>
 
           <ModalFooter>
-            <Button colorScheme='blue' mr={3} onClick={burnRBT}>
+            <Button colorScheme='blue' mr={3} onClick={burnRBT} isLoading={isLoading} loadingText='Burnning'>
               Burn
             </Button>
             <Button onClick={onClose}>Cancel</Button>
