@@ -8,7 +8,7 @@ const Home = () => {
   const { active, account, library, chainId, activate, deactivate } = useWeb3React()
   
   const injected = new InjectedConnector({
-    supportedChainIds: [1, 513100, 10001],
+    supportedChainIds: [513100, 10001],
   })
 
   async function connect() {
@@ -40,7 +40,7 @@ const Home = () => {
     <VStack w={'full'}>
       <Heading size="md" marginBottom={6}>
         <Button onClick={() => wallet()} colorScheme='teal' variant='outline'>
-          {active ? <span><b>{account}</b></span> : <span>Connect to MetaMask</span>}
+          {active ? <span><b>{account}</b></span> : <span>Connect to MetaMask(Only support EthereumPoW/EthereumFair)</span>}
         </Button>        
       </Heading>
 
