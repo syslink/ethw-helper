@@ -1,6 +1,5 @@
 import { Box, Container, Flex, HStack } from '@chakra-ui/react';
 import { ColorModeButton, MoralisLogo, NavBar } from 'components/elements';
-import { ConnectButton } from '../ConnectButton';
 
 const Header = () => {
   return (
@@ -10,7 +9,6 @@ const Header = () => {
           <MoralisLogo />
           <NavBar />
           <HStack gap={'10px'}>
-            {/* <ConnectButton /> */}
             <ColorModeButton />
           </HStack>
         </Flex>

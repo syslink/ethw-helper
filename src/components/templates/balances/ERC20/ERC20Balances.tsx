@@ -15,31 +15,58 @@ import {
   Avatar,
   HStack,
   useColorModeValue,
-  Stack,
-  useToast
+  useToast,
+  useDisclosure,
+  Modal,
+  ModalOverlay,
+  ModalContent,
+  ModalHeader,
+  ModalFooter,
+  ModalBody,
+  ModalCloseButton,
+  FormControl,
+  FormLabel,
+  Input
 } from '@chakra-ui/react';
-import { FC, useEffect, useState } from 'react';
+import React, { FC, useEffect, useState } from 'react';
 import { getEllipsisTxt } from 'utils/format';
-import { IERC20Balances } from './types';
 import Erc20ABI from './erc20ABI.json';
-import SwapAllErc20 from './Reborn.json';
+import Reborn from './Reborn.json';
 import BigNumber from 'bignumber.js';
 
-const ERC20Balances: FC<IERC20Balances> = ({ account, web3, chainId }) => {
+
+interface IBalances {
+  [address: string]: string
+}
+
+type Web3Info = {
+  account: string;
+  web3: any;
+  chainId: number;
+}
+
+const ERC20Balances: FC<Web3Info> = ({ account, web3, chainId }) => {
   const hoverTrColor = useColorModeValue('gray.100', 'gray.700');
+  const { isOpen, onOpen, onClose } = useDisclosure()
 
-  const [tokenList, setTokenList] = useState([])
-  const [balances, setBalances] = useState({})
-
+  const [tokenList, setTokenList] = useState<any[]>([])
+  const [balances, setBalances] = useState<IBalances>({})
+  const [rbtBalance, setRbtBalance] = useState<string>('0');
+  
   const toast = useToast();
 
-  const delegatorAddr = {10001: '0x3a9Fe5AC9Bab2d4457433185276a20718bFE6e2F', 513100: '0x6624b3b7501e9dd7D4003eB24C392EF07e27b1D4'};
-  const unit = {10001: 'ETHW', 513100: 'ETF'}
+  const initialRef = React.useRef(null)
+  const finalRef = React.useRef(null)
+
+  let burnRBTNumber = '';
+
+  const delegatorAddr: Record<number, string> = {10001: '0x3a9Fe5AC9Bab2d4457433185276a20718bFE6e2F', 513100: '0x6624b3b7501e9dd7D4003eB24C392EF07e27b1D4'}
+  const unit: Record<number, string> = {10001: 'ETHW', 513100: 'ETF'}
 
   const getBalance = (erc20Addr: string, decimals: number) => {
-    var contract = new web3.eth.Contract(Erc20ABI, erc20Addr);
+    const contract = new web3.eth.Contract(Erc20ABI, erc20Addr);
     const contractFunc = contract.methods['balanceOf'];        
-    contractFunc(account).call({from: account}).then(result => {
+    contractFunc(account).call({from: account}).then((result: any) => {
       try {
         const balance = new BigNumber(result).shiftedBy(decimals * -1).toString();
         console.log(erc20Addr, balance);
@@ -51,30 +78,45 @@ const ERC20Balances: FC<IERC20Balances> = ({ account, web3, chainId }) => {
     });
   }
 
+  const getRBTBalance = () => {
+    const contract = new web3.eth.Contract(Erc20ABI, delegatorAddr[chainId]);
+    const contractFunc = contract.methods['balanceOf'];        
+    contractFunc(account).call({from: account}).then((result: any) => {
+      try {
+        const balance = new BigNumber(result).shiftedBy(-18).toString();
+        setRbtBalance(balance);
+      } catch (error) {
+        console.log(error);
+      }
+    });
+  }
+
   useEffect(() => {
     if (account != null) {
-      const etherScanURL = 'https://api.ethplorer.io/getAddressInfo/' + account + '?apiKey=freekey';
+      const etherScanURL = `https://api.ethplorer.io/getAddressInfo/${account}?apiKey=freekey`;
       
       fetch(etherScanURL)
         .then((response) => response.json())
-        .then((data) => {
+        .then((data: any) => {
           console.log(data);
-          if (data == null || data.tokens == null) return;
-          const tokens = []
-          data.tokens.map(token => {
-            if (token.tokenInfo.decimals == 0) return;
+          if (data == null || data.tokens == null) {return;}
+          const tokens: any[] = []
+          data.tokens.forEach((token: any) => {
+            if (token.tokenInfo.decimals === 0) {return;}
             tokens.push(token.tokenInfo);
             getBalance(token.tokenInfo.address, token.tokenInfo.decimals);
           })
           setTokenList(tokens);
         });
+      
+      getRBTBalance();
     }
   }, [account]);
 
-  const approve = (erc20Addr) => {
-    var contract = new web3.eth.Contract(Erc20ABI, erc20Addr);
-    var contractFunc = contract.methods['allowance'];  
-    contractFunc(account, delegatorAddr[chainId]).call({from: account}).then(result => {
+  const approve = (erc20Addr: string) => {
+    const contract = new web3.eth.Contract(Erc20ABI, erc20Addr);
+    let contractFunc = contract.methods['allowance'];  
+    contractFunc(account, delegatorAddr[chainId]).call({from: account}).then((result: any) => {
       if (result > 0) {
         toast({
           title: 'Approved...',
@@ -85,20 +127,18 @@ const ERC20Balances: FC<IERC20Balances> = ({ account, web3, chainId }) => {
         });
       } else {
         contractFunc = contract.methods['approve'];  
-        const data = contractFunc(delegatorAddr[chainId], '0x' + new BigNumber(1).shiftedBy(28).toString(16)).encodeABI();
+        const data = contractFunc(delegatorAddr[chainId], `0x${new BigNumber(1).shiftedBy(28).toString(16)}`).encodeABI();
         const tx = {
             from: account,
             to: erc20Addr,
             data,
-            value: 0
+            value: 0,
+            gasLimit: 0
         }
-        contractFunc(delegatorAddr[chainId], '0x' + new BigNumber(1).shiftedBy(28).toString(16)).estimateGas({from: account}).then(gasLimit => {
+        contractFunc(delegatorAddr[chainId], `0x${new BigNumber(1).shiftedBy(28).toString(16)}`).estimateGas({from: account}).then((gasLimit: any) => {
           tx.gasLimit = gasLimit;
           web3.eth.sendTransaction(tx)
-              .on('transactionHash', txHash => {
-                  
-              })
-              .on('receipt', receipt => {
+                .on('receipt', () => {
                 getBalance(erc20Addr, 18);
                 toast({
                   title: 'Approved Successfully',
@@ -108,23 +148,29 @@ const ERC20Balances: FC<IERC20Balances> = ({ account, web3, chainId }) => {
                   isClosable: true,
                 });
               })
-              .on('error', error => {
-                  
+              .on('error', () => {
+                toast({
+                  title: 'Approved Failed',
+                  description: "Failed",
+                  status: 'error',
+                  position: 'top-right',
+                  isClosable: true,
+                });
               });
          });
       }
     });   
   }
 
-  const getAmountOut = (erc20Addr) => {
-    var contract = new web3.eth.Contract(SwapAllErc20, delegatorAddr[chainId]);
-    var contractFunc = contract.methods['getAmountOutETH'];  
-    contractFunc([erc20Addr]).call({from: account}).then(result => {
+  const getAmountOut = (erc20Addr: string) => {
+    const contract = new web3.eth.Contract(Reborn, delegatorAddr[chainId]);
+    const contractFunc = contract.methods['getAmountOutETH'];  
+    contractFunc([erc20Addr]).call({from: account}).then((result: any) => {
       try {
         const balance = new BigNumber(result).shiftedBy(-18).toString();
         toast({
-          title: unit[chainId] + ' AmountOut',
-          description: balance + ' ' + unit[chainId],
+          title: `${unit[chainId]} AmountOut`,
+          description: `${balance} ${unit[chainId]}`,
           status: 'success',
           position: 'top-right',
           isClosable: true,
@@ -135,26 +181,24 @@ const ERC20Balances: FC<IERC20Balances> = ({ account, web3, chainId }) => {
     });
   }
 
-  const swap2ETHw = (erc20Addr) => {
-    var contract = new web3.eth.Contract(SwapAllErc20, delegatorAddr[chainId]);
-    var contractFunc = contract.methods['swap'];  
+  const swap2ETHw = (erc20Addr: string) => {
+    const contract = new web3.eth.Contract(Reborn, delegatorAddr[chainId]);
+    const contractFunc = contract.methods['swap'];  
     const data = contractFunc([erc20Addr]).encodeABI();
     const tx = {
         from: account,
         to: delegatorAddr[chainId],
         data,
-        value: 0
+        value: 0,
+        gasLimit: 0
     }
 
     console.log('tx1', tx, erc20Addr);
-    contractFunc([erc20Addr]).estimateGas({from: account}).then(gasLimit => {
+    contractFunc([erc20Addr]).estimateGas({from: account}).then((gasLimit: any) => {
       tx.gasLimit = gasLimit;
       console.log('tx2', tx);
       web3.eth.sendTransaction(tx)
-          .on('transactionHash', txHash => {
-              
-          })
-          .on('receipt', receipt => {
+          .on('receipt', () => {
             toast({
               title: 'Swap ETH-w Successfully',
               description: "Has been swapped successfully",
@@ -163,8 +207,53 @@ const ERC20Balances: FC<IERC20Balances> = ({ account, web3, chainId }) => {
               isClosable: true,
             });
           })
-          .on('error', error => {
-              
+          .on('error', () => {
+            toast({
+              title: 'Swap Failed',
+              description: "Failed",
+              status: 'error',
+              position: 'top-right',
+              isClosable: true,
+            });
+          });
+      });
+  }
+  const handleInputChange = (e: any) => {
+    burnRBTNumber = `0x${new BigNumber(e.target.value).shiftedBy(18).toString(16)}`;
+  }
+
+  const burnRBT = () => {
+    const contract = new web3.eth.Contract(Reborn, delegatorAddr[chainId]);
+    const contractFunc = contract.methods['burnRBT'];  
+    const data = contractFunc(burnRBTNumber).encodeABI();
+    const tx = {
+        from: account,
+        to: delegatorAddr[chainId],
+        data,
+        value: 0,
+        gasLimit: 0
+    }
+
+    contractFunc(burnRBTNumber).estimateGas({from: account}).then((gasLimit: any) => {
+      tx.gasLimit = gasLimit;
+      web3.eth.sendTransaction(tx)
+          .on('receipt', () => {
+            toast({
+              title: 'Successfully',
+              description: `Burn RBT to get ${unit[chainId]}`,
+              status: 'success',
+              position: 'top-right',
+              isClosable: true,
+            });
+          })
+          .on('error', () => {
+            toast({
+              title: 'Swap Failed',
+              description: "Failed",
+              status: 'error',
+              position: 'top-right',
+              isClosable: true,
+            });
           });
       });
   }
@@ -172,7 +261,13 @@ const ERC20Balances: FC<IERC20Balances> = ({ account, web3, chainId }) => {
   return (
     <>
       <Heading size="lg" marginBottom={6}>
-        ERC20 Balances
+        <HStack justifyContent='space-between'>
+          <div>Your ERC20</div>
+          <HStack spacing='18px'>
+            <div>RBT:{rbtBalance}</div>
+            <Button colorScheme='teal' variant='outline' onClick={onOpen}>Burn</Button>
+          </HStack>
+        </HStack>
       </Heading>
       {tokenList?.length ? (
         <Box border="2px" borderColor={hoverTrColor} borderRadius="xl" padding="24px 18px">
@@ -220,6 +315,31 @@ const ERC20Balances: FC<IERC20Balances> = ({ account, web3, chainId }) => {
       ) : (
         <Box>Looks Like you do not have any ERC20 tokenList</Box>
       )}
+      <Modal
+        initialFocusRef={initialRef}
+        finalFocusRef={finalRef}
+        isOpen={isOpen}
+        onClose={onClose}
+      >
+        <ModalOverlay />
+        <ModalContent>
+          <ModalHeader>Burn RBT to get {unit[chainId]}</ModalHeader>
+          <ModalCloseButton />
+          <ModalBody pb={6}>
+            <FormControl>
+              <FormLabel>Burned Number</FormLabel>
+              <Input ref={initialRef} onChange={handleInputChange} />
+            </FormControl>
+          </ModalBody>
+
+          <ModalFooter>
+            <Button colorScheme='blue' mr={3} onClick={burnRBT}>
+              Burn
+            </Button>
+            <Button onClick={onClose}>Cancel</Button>
+          </ModalFooter>
+        </ModalContent>
+      </Modal>
     </>
   );
 };

@@ -1,13 +1,11 @@
-import { CheckCircleIcon, SettingsIcon, ExternalLinkIcon } from '@chakra-ui/icons';
-import { Heading, VStack, List, ListIcon, ListItem } from '@chakra-ui/react';
-import { Container, Link, Button } from '@chakra-ui/react';
+import { Heading, VStack } from '@chakra-ui/react';
+import { Container, Button } from '@chakra-ui/react';
 import { InjectedConnector } from '@web3-react/injected-connector';
 import { useWeb3React } from "@web3-react/core";
-import { Default } from 'components/layouts/Default';
-import { ERC20Balances, IERC20Balances } from 'components/templates/balances/ERC20';
+import { ERC20Balances } from 'components/templates/balances/ERC20';
 
 const Home = () => {
-  const { active, account, library, chainId, connector, activate, deactivate } = useWeb3React()
+  const { active, account, library, chainId, activate, deactivate } = useWeb3React()
   
   const injected = new InjectedConnector({
     supportedChainIds: [1, 513100, 10001],
@@ -30,11 +28,18 @@ const Home = () => {
     }
   }
 
+  function wallet() {
+    if (active) {
+      disconnect();
+    } else {
+      connect();
+    }
+  }
 
   return (
     <VStack w={'full'}>
       <Heading size="md" marginBottom={6}>
-        <Button onClick={() => active ? disconnect() : connect()} colorScheme='teal' variant='outline'>
+        <Button onClick={() => wallet()} colorScheme='teal' variant='outline'>
           {active ? <span><b>{account}</b></span> : <span>Connect to MetaMask</span>}
         </Button>        
       </Heading>
