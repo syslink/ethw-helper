@@ -1,6 +1,11 @@
 {
   "extends": "@moralisweb3",
   "rules": {
-    "no-console": "off"
+    "no-console": "off",
+    "eqeqeq": "off",
+    "curly": "error",
+    "quotes": ["error", "double"],
+    "no-unused-expressions": "off",
+    "allowTemplateLiterals": false
   }
 }

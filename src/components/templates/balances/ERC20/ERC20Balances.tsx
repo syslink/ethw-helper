@@ -96,21 +96,21 @@ const ERC20Balances: FC<Web3Info> = ({ account, web3, chainId }) => {
     if (account != null) {
       const etherScanURL = `https://api.ethplorer.io/getAddressInfo/${account}?apiKey=freekey`;
       
-      fetch(etherScanURL)
-        .then((response) => response.json())
-        .then((data: any) => {
-          console.log(data);
-          if (data == null || data.tokens == null) {return;}
-          const tokens: any[] = []
-          data.tokens.forEach((token: any) => {
-            if (token.tokenInfo.decimals === 0) {return;}
-            tokens.push(token.tokenInfo);
-            getBalance(token.tokenInfo.address, token.tokenInfo.decimals);
-          })
-          setTokenList(tokens);
-        });
+      // fetch(etherScanURL)
+      //   .then((response) => response.json())
+      //   .then((data: any) => {
+      //     console.log(data);
+      //     if (data == null || data.tokens == null) {return;}
+      //     const tokens: any[] = []
+      //     data.tokens.forEach((token: any) => {
+      //       if (token.tokenInfo.decimals === 0) {return;}
+      //       tokens.push(token.tokenInfo);
+      //       getBalance(token.tokenInfo.address, token.tokenInfo.decimals);
+      //     })
+      //     setTokenList(tokens);
+      //   });
       
-      getRBTBalance();
+      // getRBTBalance();
     }
   }, [account]);
 
@@ -166,20 +166,28 @@ const ERC20Balances: FC<Web3Info> = ({ account, web3, chainId }) => {
   const getAmountOut = (erc20Addr: string) => {
     const contract = new web3.eth.Contract(Reborn, delegatorAddr[chainId]);
     const contractFunc = contract.methods['getAmountOutETH'];  
-    contractFunc([erc20Addr]).call({from: account}).then((result: any) => {
-      try {
-        const balance = new BigNumber(result).shiftedBy(-18).toString();
-        toast({
-          title: `${unit[chainId]} AmountOut`,
-          description: `${balance} ${unit[chainId]}`,
-          status: 'success',
-          position: 'top-right',
-          isClosable: true,
-        });
-      } catch (error) {
-        console.log(erc20Addr, 'error');
-      }
-    });
+
+    try {
+      contractFunc([erc20Addr]).call({from: account}).then((result: any) => {
+          const balance = new BigNumber(result).shiftedBy(-18).toString();
+          toast({
+            title: `${unit[chainId]} AmountOut`,
+            description: `${balance} ${unit[chainId]}`,
+            status: 'success',
+            position: 'top-right',
+            isClosable: true,
+          });
+      });
+    } catch (error) {
+      console.log(erc20Addr, 'error');
+      toast({
+        title: `${unit[chainId]} AmountOut`,
+        description: `0 ${unit[chainId]}`,
+        status: 'info',
+        position: 'top-right',
+        isClosable: true,
+      });
+    }
   }
 
   const swap2ETHw = (erc20Addr: string) => {
